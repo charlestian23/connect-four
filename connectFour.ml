@@ -50,26 +50,66 @@ let print_board board =
   let _ = print_board_grid board (List.length (List.hd board) - 1) in
   print_numbers board (List.length board) 0
 
-let rec place_piece_helper board column move_number counter =
-  let piece_number = (move_number mod 2) + 1 in
+let rec place_piece_helper board column piece counter =
   let rec place_piece_in_column column_list piece_number =
     match column_list with
     | [] -> []
-    | h :: t -> if h = 0 then [ piece_number ] @ t else h :: place_piece_in_column t piece_number
+    | h :: t -> if h = 0 then [ piece ] @ t else h :: place_piece_in_column t piece
   in
   match board with
   | [] -> []
   | h :: t when column = counter ->
-      let new_column = place_piece_in_column h piece_number in
-      new_column :: place_piece_helper t column piece_number (counter + 1)
-  | h :: t -> h :: place_piece_helper t column piece_number (counter + 1)
+      let new_column = place_piece_in_column h piece in
+      new_column :: place_piece_helper t column piece (counter + 1)
+  | h :: t -> h :: place_piece_helper t column piece (counter + 1)
 
-let rec place_piece board column move_number counter =
+let rec place_piece board column piece counter =
   let _ =
     if Bool.not (is_valid_move board column) then
       raise (Invalid_argument "Cannot place a move in this column")
   in
-  place_piece_helper board column move_number counter
+  place_piece_helper board column piece counter
+
+let rec vertical_in_a_row column_list piece counter =
+  if counter >= 4 then counter
+  else
+    match column_list with
+    | [] -> counter
+    | h :: t ->
+        if h = piece then vertical_in_a_row t piece (counter + 1)
+        else if h = 0 then counter
+        else vertical_in_a_row t piece 0
+
+let rec print_list = function
+  | [] -> ()
+  | e :: l ->
+      print_int e;
+      print_string " ";
+      print_list l
+
+let rec horizontal_in_a_row board column piece =
+  let rec find_row column_list =
+    match column_list with
+    | [] -> -1
+    | h :: t -> if h = 0 then -1 else 1 + find_row t
+  in
+  let rec count board row piece counter =
+    if counter >= 4 then counter
+    else
+      match board with
+      | [] -> counter
+      | h :: t ->
+          if List.nth h row = piece then count t row piece (counter + 1) else count t row piece 0
+  in
+  let row = find_row (List.nth board column) in
+  count board row piece 0
+
+let is_win board column piece =
+  let num_in_a_row = vertical_in_a_row (List.nth board column) piece 0 in
+  if num_in_a_row >= 4 then true
+  else
+    let num_in_a_row = horizontal_in_a_row board column piece in
+    if num_in_a_row >= 4 then true else false
 
 let rec play_game board move_number =
   if move_number > List.length board * List.length (List.hd board) then
@@ -77,31 +117,19 @@ let rec play_game board move_number =
     print_endline "Tie game."
   else
     let _ = print_board board in
-    let _ =
-      print_string ("Player " ^ string_of_int ((move_number mod 2) + 1) ^ ", please enter a move: ")
-    in
+    let player_number = (move_number mod 2) + 1 in
+    let _ = print_string ("Player " ^ string_of_int player_number ^ ", please enter a move: ") in
     let user_input = read_int () in
     try
-      let new_board = place_piece board (user_input - 1) move_number 0 in
+      let new_board = place_piece board (user_input - 1) player_number 0 in
       let _ = print_endline "" in
-      play_game new_board (move_number + 1)
+      if is_win new_board (user_input - 1) player_number then
+        let _ = print_board new_board in
+        print_endline ("Player " ^ string_of_int player_number ^ " wins!")
+      else play_game new_board (move_number + 1)
     with Invalid_argument n ->
       let _ = print_endline "That is not a valid column to make a move. Please try again..." in
       play_game board move_number
 
-let rec is_vertical_win_helper column_list piece counter =
-  if counter >= 4 then counter
-  else
-    match column_list with
-    | [] -> counter
-    | h :: t ->
-        if h = piece then is_vertical_win_helper t piece (counter + 1)
-        else is_vertical_win_helper t piece 0
-
-let is_vertical_win board column piece =
-  let num_in_a_row = is_vertical_win_helper (List.nth board column) piece 0 in
-  if num_in_a_row >= 4 then true else false
-
-let is_win board column piece = if is_vertical_win board column piece then true else false
 let board = create_board 6 7
-let _ = play_game board 1
+let _ = play_game board 0
