@@ -8,6 +8,11 @@ let rec create_board rows columns =
   | 0 -> []
   | n -> column :: create_board rows (columns - 1)
 
+let is_valid_move board column =
+  let list = List.nth board column in
+
+  List.nth list (List.length list - 1) = 0
+
 let rec print_board_grid board rows =
   let rec print_row board row =
     match board with
@@ -26,18 +31,20 @@ let rec print_board_grid board rows =
       let _ = print_row board n in
       print_board_grid board (n - 1)
 
-let rec print_numbers columns = function
+let rec print_numbers board columns = function
   | n when n = columns -> print_endline ""
   | n ->
-      let _ = print_string (string_of_int n ^ " ") in
-      print_numbers columns (n + 1)
+      let _ =
+        if is_valid_move board n then print_string (string_of_int (n + 1) ^ " ") else print_string "  "
+      in
+      print_numbers board columns (n + 1)
 
 let print_board board =
   let _ = print_board_grid board (List.length (List.hd board) - 1) in
-  print_numbers (List.length board) 0
+  print_numbers board (List.length board) 0
 
 (* Reference: https://stackoverflow.com/questions/37091784 ocaml-function-replace-a-element-in-a-list *)
-let rec place_piece board column move_number counter =
+let rec place_piece_helper board column move_number counter =
   let piece_number = (move_number mod 2) + 1 in
   let rec place_piece_in_column column_list piece_number =
     match column_list with
@@ -48,8 +55,14 @@ let rec place_piece board column move_number counter =
   | [] -> []
   | h :: t when column = counter ->
       let new_column = place_piece_in_column h piece_number in
-      new_column :: place_piece t column piece_number (counter + 1)
-  | h :: t -> h :: place_piece t column piece_number (counter + 1)
+      new_column :: place_piece_helper t column piece_number (counter + 1)
+  | h :: t -> h :: place_piece_helper t column piece_number (counter + 1)
+
+let rec place_piece board column move_number counter =
+  let _ = if Bool.not (is_valid_move board column) then
+    let _ = print_endline "Exception thrown" in
+    raise (Invalid_argument "Cannot place a move in this column") in
+  place_piece_helper board column move_number counter
 
 let board = create_board 6 7
 let _ = print_board board
@@ -57,4 +70,9 @@ let _ = print_endline ""
 let board = place_piece board 3 1 0
 let board = place_piece board 3 2 0
 let board = place_piece board 3 3 0
+let board = place_piece board 3 4 0
+let board = place_piece board 3 5 0
+let board = place_piece board 3 6 0
+(* let board = place_piece board 3 7 0 *)
+(* let board = place_piece board 3 8 0 *)
 let _ = print_board board
