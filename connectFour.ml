@@ -133,10 +133,33 @@ module Game : Game_type = struct
     let row = find_row (List.nth board column) in
     count_up board row column piece 0 + count_down board row column piece 0 - 1
 
+  let right_slant_diagonal_in_a_row board column piece =
+    let rows = List.length (List.hd board) in
+    let columns = List.length board in
+    let rec count_up board row column piece counter =
+      if counter >= 4 then counter
+      else if row < 0 || column < 0 then counter
+      else
+        let current_piece = List.nth (List.nth board column) row in
+        if current_piece = piece then count_up board (row - 1) (column - 1) piece (counter + 1)
+        else counter
+    in
+    let rec count_down board row column piece counter =
+      if counter >= 4 then counter
+      else if row >= rows || column >= columns then counter
+      else
+        let current_piece = List.nth (List.nth board column) row in
+        if current_piece = piece then count_down board (row + 1) (column + 1) piece (counter + 1)
+        else counter
+    in
+    let row = find_row (List.nth board column) in
+    count_up board row column piece 0 + count_down board row column piece 0 - 1
+
   let is_win board column piece =
     if vertical_in_a_row (List.nth board column) piece 0 >= 4 then true
     else if horizontal_in_a_row board column piece >= 4 then true
     else if left_slant_diagonal_in_a_row board column piece >= 4 then true
+    else if right_slant_diagonal_in_a_row board column piece >= 4 then true
     else false
 
   let rec play_game board move_number =
