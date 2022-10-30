@@ -1,7 +1,7 @@
 module type Game_type = sig
-  val create_board : int -> int -> (int list list)
-  val print_board : (int list list) -> unit
-  val start_game : (int list list) -> unit
+  val create_board : int -> int -> int list list
+  val print_board : int list list -> unit
+  val start_game : int list list -> unit
 end
 
 module Game : Game_type = struct
@@ -94,12 +94,12 @@ module Game : Game_type = struct
         print_string " ";
         print_list l
 
+  let rec find_row column_list =
+    match column_list with
+    | [] -> -1
+    | h :: t -> if h = 0 then -1 else 1 + find_row t
+
   let rec horizontal_in_a_row board column piece =
-    let rec find_row column_list =
-      match column_list with
-      | [] -> -1
-      | h :: t -> if h = 0 then -1 else 1 + find_row t
-    in
     let rec count board row piece counter =
       if counter >= 4 then counter
       else
@@ -111,12 +111,33 @@ module Game : Game_type = struct
     let row = find_row (List.nth board column) in
     count board row piece 0
 
+  let left_slant_diagonal_in_a_row board column piece =
+    let rows = List.length (List.hd board) in
+    let columns = List.length board in
+    let rec count_up board row column piece counter =
+      if counter >= 4 then counter
+      else if row >= rows || column < 0 then counter
+      else
+        let current_piece = List.nth (List.nth board column) row in
+        if current_piece = piece then count_up board (row + 1) (column - 1) piece (counter + 1)
+        else counter
+    in
+    let rec count_down board row column piece counter =
+      if counter >= 4 then counter
+      else if row < 0 || column >= columns then counter
+      else
+        let current_piece = List.nth (List.nth board column) row in
+        if current_piece = piece then count_down board (row - 1) (column + 1) piece (counter + 1)
+        else counter
+    in
+    let row = find_row (List.nth board column) in
+    count_up board row column piece 0 + count_down board row column piece 0 - 1
+
   let is_win board column piece =
-    let num_in_a_row = vertical_in_a_row (List.nth board column) piece 0 in
-    if num_in_a_row >= 4 then true
-    else
-      let num_in_a_row = horizontal_in_a_row board column piece in
-      if num_in_a_row >= 4 then true else false
+    if vertical_in_a_row (List.nth board column) piece 0 >= 4 then true
+    else if horizontal_in_a_row board column piece >= 4 then true
+    else if left_slant_diagonal_in_a_row board column piece >= 4 then true
+    else false
 
   let rec play_game board move_number =
     if move_number > List.length board * List.length (List.hd board) then
@@ -138,11 +159,11 @@ module Game : Game_type = struct
         let _ = print_endline "That is not a valid column to make a move. Please try again..." in
         play_game board move_number
 
-    let start_game board = play_game board 0
+  let start_game board = play_game board 0
 end
 
 module GameController = struct
-    let start_game =
+  let start_game =
     let board = Game.create_board 6 7 in
     Game.start_game board
 end
