@@ -87,13 +87,6 @@ module Game : Game_type = struct
           else if h = 0 then counter
           else vertical_in_a_row t piece 0
 
-  let rec print_list = function
-    | [] -> ()
-    | e :: l ->
-        print_int e;
-        print_string " ";
-        print_list l
-
   let rec find_row column_list =
     match column_list with
     | [] -> -1
